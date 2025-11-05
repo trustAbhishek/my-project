@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fitmydevice — India (Static)</title>
+  <style>
+    :root{--bg:#f7fafc;--card:#fff;--muted:#6b7280;--accent:#4f46e5}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#111;margin:0}
+    .container{max-width:1100px;margin:36px auto;padding:20px}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+    header h1{margin:0;font-size:24px}
+    .grid{display:grid;gap:12px}
+    .filters{grid-template-columns:repeat(4,1fr);margin-top:12px}
+    select,input{width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:8px}
+    .results{margin-top:18px}
+    .device{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px}
+    .device + .device{margin-top:10px}
+    .badge{background:#f3f4f6;padding:6px 8px;border-radius:999px;font-size:12px}
+    .price{margin-left:auto;font-weight:700}
+    .btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer}
+    .btn-primary{background:var(--accent);color:white}
+    .btn-ghost{background:#fff;border:1px solid #e5e7eb}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center}
+    .modal .card{max-width:800px;width:100%}
+    @media(max-width:800px){.filters{grid-template-columns:repeat(1,1fr)}}
+    /* small helper */
+    .muted{color:var(--muted)}
+    .flex{display:flex;gap:12px;align-items:center}
+    .right{display:flex;flex-direction:column;align-items:flex-end}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="card">
+        <h1>Fitmydevice — India (Static)</h1>
+        <p style="color:var(--muted);margin:6px 0 0;">Select budget & purpose. Click any device for details and buy links (opens merchant search/product).</p>
+      </div>
+    </header>
+
+    <section class="grid filters" style="margin-top:14px">
+      <div class="card">
+        <label>Device Type</label>
+        <select id="deviceType"><option value="Any">Any</option><option value="Laptop">Laptop</option><option value="Smartphone">Smartphone</option></select>
+      </div>
+      <div class="card">
+        <label>Budget</label>
+        <select id="budget">
+          <option value="tier1">&lt;= ₹30,000</option>
+          <option value="tier2">₹30,001 - ₹60,000</option>
+          <option value="tier3">₹60,001 - ₹1,00,000</option>
+          <option value="tier4">&gt; ₹1,00,000</option>
+        </select>
+      </div>
+      <div class="card">
+        <label>Purpose</label>
+        <select id="purpose">
+          <option value="coding">Coding / Development</option>
+          <option value="gaming">Gaming</option>
+          <option value="design">Design / Creative</option>
+          <option value="study">Study / Students</option>
+          <option value="office">Office / Productivity</option>
+        </select>
+      </div>
+      <div class="card">
+        <label>Search</label>
+        <input id="q" placeholder="brand or model" />
+      </div>
+    </section>
+
+    <section class="results">
+      <div class="card" style="margin-top:12px;padding:16px">
+        <h3 style="margin:0 0 8px">Top recommendations</h3>
+        <div id="recommendations"></div>
+      </div>
+
+      <div class="card" style="margin-top:12px;padding:16px">
+        <h3 style="margin:0 0 8px">All matching devices</h3>
+        <div id="list"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" style="display:none" class="modal">
+    <div class="card" role="dialog" aria-modal="true">
+      <div style="display:flex;align-items:start;gap:12px">
+        <div id="md-emoji" style="font-size:34px">💻</div>
+        <div style="flex:1">
+          <h2 id="md-name" style="margin:0"></h2>
+          <div id="md-price" style="color:var(--muted);margin-top:4px"></div>
+        </div>
+        <button id="md-close" class="btn btn-ghost">Close</button>
+      </div>
+
+      <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <p id="md-short" style="margin:0;color:var(--muted)"></p>
+          <h4 style="margin-top:8px">Purposes</h4>
+          <div id="md-purposes" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+        <div>
+          <h4>Specifications</h4>
+          <ul id="md-specs" style="margin:6px 0 0 18px;color:var(--muted)"></ul>
+          <div style="margin-top:12px">
+            <a id="md-buy" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Buy</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- DEVICES: edit buyLink values to direct product pages if you want exact URLs ----------
+    const DEVICES = [
+      {id:'lap_lenovo_ideapad_3',type:'Laptop',name:'Lenovo IdeaPad 3 (Ryzen 5)',brand:'Lenovo',price:29999,purposes:['study','office','coding'],short:'Affordable everyday laptop.',specs:{cpu:'Ryzen 5',ram:'8 GB',storage:'512 GB SSD'},buyLink:'https://www.amazon.in/s?k=Lenovo+IdeaPad+3+Ryzen+5'},
+      {id:'lap_dell_inspiron_15',type:'Laptop',name:'Dell Inspiron 15 (i5)',brand:'Dell',price:34990,purposes:['coding','office','study'],short:'Reliable performer.',specs:{cpu:'Intel i5',ram:'8 GB',storage:'512 GB SSD'},buyLink:'https://www.flipkart.com/search?q=Dell+Inspiron+15+i5'},
+      {id:'lap_hp_15s',type:'Laptop',name:'HP 15s (Ryzen 5)',brand:'HP',price:37999,purposes:['study','office','coding'],short:'Good balance of price and performance.',specs:{cpu:'Ryzen 5',ram:'8 GB',storage:'512 GB SSD'},buyLink:'https://www.amazon.in/s?k=HP+15s+Ryzen+5'},
+      {id:'lap_asus_vivobook',type:'Laptop',name:'ASUS VivoBook 14',brand:'ASUS',price:42999,purposes:['coding','design','office'],short:'Portable 14\" laptop.',specs:{cpu:'Intel i5',ram:'8 GB',storage:'512 GB SSD'},buyLink:'https://www.flipkart.com/search?q=ASUS+VivoBook+14'},
+      {id:'lap_lenovo_yoga_slim7',type:'Laptop',name:'Lenovo Yoga Slim 7',brand:'Lenovo',price:84990,purposes:['design','coding','office'],short:'Premium ultrabook.',specs:{cpu:'Intel i7',ram:'16 GB',storage:'512 GB SSD'},buyLink:'https://www.amazon.in/s?k=Lenovo+Yoga+Slim+7'},
+      {id:'lap_macbook_air_m2',type:'Laptop',name:'MacBook Air M2',brand:'Apple',price:119900,purposes:['coding','design','office'],short:'Excellent battery life and performance.',specs:{cpu:'Apple M2',ram:'8 GB',storage:'256 GB SSD'},buyLink:'https://www.apple.com/in/shop/buy-mac/macbook-air'},
+      {id:'lap_rog_strix_g16',type:'Laptop',name:'ASUS ROG Strix G16',brand:'ASUS',price:179990,purposes:['gaming','design'],short:'High-end gaming laptop.',specs:{cpu:'Intel i9',ram:'32 GB',storage:'1 TB SSD',gpu:'NVIDIA RTX 4070'},buyLink:'https://www.amazon.in/s?k=ASUS+ROG+Strix+G16'},
+      {id:'lap_lenovo_loq15',type:'Laptop',name:'Lenovo LOQ 15',brand:'Lenovo',price:66990,purposes:['gaming','design'],short:'Budget gaming laptop.',specs:{cpu:'Intel i5',ram:'16 GB',storage:'512 GB SSD',gpu:'NVIDIA RTX 3050'},buyLink:'https://www.reliancedigital.in/search?query=LOQ+15'},
+      {id:'lap_asus_tuf_a15',type:'Laptop',name:'ASUS TUF A15',brand:'ASUS',price:55990,purposes:['gaming','coding'],short:'Durable mid-range gaming laptop.',specs:{cpu:'Ryzen 7',ram:'16 GB',storage:'512 GB SSD',gpu:'RTX 3050'},buyLink:'https://www.amazon.in/s?k=ASUS+TUF+A15'},
+      {id:'lap_hp_omen_16',type:'Laptop',name:'HP Omen 16',brand:'HP',price:119990,purposes:['gaming','design'],short:'High-performance gaming/creator laptop.',specs:{cpu:'Ryzen 9',ram:'32 GB',storage:'1 TB SSD',gpu:'RTX 4070'},buyLink:'https://www.flipkart.com/search?q=HP+Omen+16'},
+      {id:'lap_macbook_pro_14',type:'Laptop',name:'MacBook Pro 14 (M2 Pro)',brand:'Apple',price:219900,purposes:['design','coding'],short:'Pro-level performance for creatives.',specs:{cpu:'M2 Pro',ram:'16 GB',storage:'512 GB SSD'},buyLink:'https://www.apple.com/in/shop/buy-mac/macbook-pro-14-and-16'},
+      {id:'lap_acerswift3',type:'Laptop',name:'Acer Swift 3',brand:'Acer',price:64990,purposes:['coding','office'],short:'Slim 14\" ultrabook.',specs:{cpu:'Intel i5',ram:'16 GB',storage:'512 GB SSD'},buyLink:'https://www.amazon.in/s?k=Acer+Swift+3'},
+
+      {id:'phone_xiaomi_redmi_note_12',type:'Smartphone',name:'Redmi Note 12 Pro',brand:'Xiaomi',price:17999,purposes:['study','everyday'],short:'Great value, strong battery.',specs:{soc:'MediaTek',ram:'6–8 GB',storage:'128 GB',camera:'108 MP'},buyLink:'https://www.amazon.in/s?k=Redmi+Note+12+Pro'},
+      {id:'phone_poco_f5',type:'Smartphone',name:'POCO F5',brand:'POCO',price:24999,purposes:['gaming','coding','everyday'],short:'Powerful midrange phone.',specs:{soc:'Snapdragon 7+',ram:'8 GB',storage:'128 GB'},buyLink:'https://www.flipkart.com/search?q=POCO+F5'},
+      {id:'phone_samsung_s24_fe',type:'Smartphone',name:'Samsung Galaxy S24 FE',brand:'Samsung',price:34999,purposes:['design','office','everyday'],short:'Value flagship.',specs:{soc:'Exynos/Snapdragon',ram:'8 GB',storage:'128 GB'},buyLink:'https://www.amazon.in/s?k=Samsung+Galaxy+S24+FE'},
+      {id:'phone_nothing_phone_2',type:'Smartphone',name:'Nothing Phone (2)',brand:'Nothing',price:29999,purposes:['design','everyday'],short:'Distinctive design and clean software.',specs:{soc:'Snapdragon 8-series',ram:'8 GB',storage:'128 GB'},buyLink:'https://www.amazon.in/s?k=Nothing+Phone+2'},
+      {id:'phone_iphone_15',type:'Smartphone',name:'iPhone 15',brand:'Apple',price:79900,purposes:['design','office'],short:'Flagship iPhone.',specs:{soc:'A16',ram:'6 GB',storage:'128 GB'},buyLink:'https://www.apple.com/in/iphone/'},
+      {id:'phone_google_pixel_8_pro',type:'Smartphone',name:'Google Pixel 8 Pro',brand:'Google',price:73999,purposes:['design','coding','everyday'],short:'Great computational photography.',specs:{soc:'Tensor G3',ram:'12 GB',storage:'128 GB'},buyLink:'https://store.google.com/product/pixel_8_pro'},
+      {id:'phone_realme_11',type:'Smartphone',name:'Realme 11',brand:'Realme',price:10999,purposes:['study','everyday'],short:'Budget-friendly phone.',specs:{soc:'MediaTek',ram:'6 GB',storage:'128 GB'},buyLink:'https://www.flipkart.com/search?q=Realme+11'},
+      {id:'phone_poco_x6',type:'Smartphone',name:'POCO X6 Pro',brand:'POCO',price:20999,purposes:['gaming','everyday'],short:'Good mid-range gaming phone.',specs:{soc:'Snapdragon 7+',ram:'8 GB',storage:'128 GB'},buyLink:'https://www.flipkart.com/search?q=POCO+X6+Pro'},
+      {id:'phone_nokia_hmd_vibe',type:'Smartphone',name:'HMD Vibe 5G',brand:'HMD',price:8999,purposes:['study','everyday'],short:'Ultra budget phone.',specs:{soc:'Unisoc',ram:'4 GB',storage:'64 GB'},buyLink:'https://www.amazon.in/s?k=HMD+Vibe+5G'},
+      {id:'phone_ai_nova',type:'Smartphone',name:'Ai+ Nova 5G',brand:'Ai+',price:8999,purposes:['study','everyday'],short:'Entry-level 5G phone.',specs:{soc:'Entry 5G',ram:'4 GB',storage:'64 GB'},buyLink:'https://www.flipkart.com/search?q=Ai+Nova+5G'}
+    ];
+
+    const BUDGETS = {
+      tier1:{min:0,max:30000},tier2:{min:30001,max:60000},tier3:{min:60001,max:100000},tier4:{min:100001,max:9999999}
+    };
+
+    // DOM refs
+    const deviceTypeEl = document.getElementById('deviceType');
+    const budgetEl = document.getElementById('budget');
+    const purposeEl = document.getElementById('purpose');
+    const qEl = document.getElementById('q');
+    const listEl = document.getElementById('list');
+    const recEl = document.getElementById('recommendations');
+    const modal = document.getElementById('modal');
+    const mdName = document.getElementById('md-name');
+    const mdPrice = document.getElementById('md-price');
+    const mdShort = document.getElementById('md-short');
+    const mdPurposes = document.getElementById('md-purposes');
+    const mdSpecs = document.getElementById('md-specs');
+    const mdBuy = document.getElementById('md-buy');
+    const mdClose = document.getElementById('md-close');
+    const mdEmoji = document.getElementById('md-emoji');
+
+    function formatINR(n){ return '₹' + n.toLocaleString('en-IN'); }
+
+    function filterDevices(){
+      const deviceType = deviceTypeEl.value;
+      const budget = BUDGETS[budgetEl.value];
+      const purpose = purposeEl.value;
+      const q = qEl.value.trim().toLowerCase();
+      return DEVICES.filter(d => {
+        if(deviceType !== 'Any' && d.type !== deviceType) return false;
+        if(!(d.price >= budget.min && d.price <= budget.max)) return false;
+        if(purpose && !d.purposes.includes(purpose)) return false;
+        if(q && !(d.name.toLowerCase().includes(q) || d.brand.toLowerCase().includes(q) || d.short.toLowerCase().includes(q))) return false;
+        return true;
+      }).sort((a,b)=>a.price-b.price);
+    }
+
+    function getRecommendations(){
+      const budget = BUDGETS[budgetEl.value];
+      const mid = Math.floor((budget.min + budget.max)/2);
+      const purpose = purposeEl.value;
+      const deviceType = deviceTypeEl.value;
+      const scored = DEVICES.map(d => {
+        let score = 0;
+        if(d.purposes.includes(purpose)) score += 50;
+        const priceDist = Math.abs(d.price - mid);
+        score += Math.max(0, 50 - Math.round(priceDist / Math.max(1000, Math.max(1, mid/10))));
+        if(deviceType !== 'Any' && d.type === deviceType) score += 10;
+        return {d,score};
+      });
+      scored.sort((a,b)=>b.score-a.score || a.d.price-b.d.price);
+      return scored.slice(0,5).map(s=>s.d);
+    }
+
+    function renderList(){
+      const matches = filterDevices();
+      listEl.innerHTML = '';
+      if(matches.length===0){ listEl.innerHTML = '<div style="color:var(--muted)">No matches — try adjusting filters.</div>'; return; }
+      matches.forEach(d => {
+        const div = document.createElement('div'); div.className='device card';
+        div.innerHTML = `<div style="font-size:22px">${d.type==='Laptop'?'💻':'📱'}</div>
+          <div>
+            <div style="font-weight:600">${escapeHtml(d.name)}</div>
+            <div style="color:var(--muted)">${escapeHtml(d.brand)} • ${escapeHtml(d.short)}</div>
+          </div>
+          <div class="right" style="margin-left:auto">
+            <div class="price">${formatINR(d.price)}</div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button class="btn btn-ghost" data-id="${d.id}">Details</button>
+              <a class="btn btn-primary" href="${d.buyLink}" target="_blank" rel="noopener noreferrer">Buy</a>
+            </div>
+          </div>`;
+        listEl.appendChild(div);
+      });
+      // attach handlers
+      listEl.querySelectorAll('button').forEach(b=>b.addEventListener('click',e=>openModal(b.getAttribute('data-id'))));
+    }
+
+    function renderRecommendations(){
+      const recs = getRecommendations();
+      recEl.innerHTML = '';
+      recs.forEach(d => {
+        const div = document.createElement('div'); div.className='device card';
+        div.innerHTML = `<div style="font-size:22px">${d.type==='Laptop'?'💻':'📱'}</div>
+          <div>
+            <div style="font-weight:600">${escapeHtml(d.name)}</div>
+            <div style="color:var(--muted)">${escapeHtml(d.brand)} • ${escapeHtml(d.short)}</div>
+          </div>
+          <div class="right" style="margin-left:auto">
+            <div class="price">${formatINR(d.price)}</div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button class="btn btn-ghost" data-id="${d.id}">Details</button>
+              <a class="btn btn-primary" href="${d.buyLink}" target="_blank" rel="noopener noreferrer">Buy</a>
+            </div>
+          </div>`;
+        recEl.appendChild(div);
+      });
+      recEl.querySelectorAll('button').forEach(b=>b.addEventListener('click',e=>openModal(b.getAttribute('data-id'))));
+    }
+
+    function openModal(id){
+      const d = DEVICES.find(x=>x.id===id); if(!d) return;
+      mdName.textContent = d.name; mdPrice.textContent = formatINR(d.price);
+      mdShort.textContent = d.short;
+      mdPurposes.innerHTML = ''; d.purposes.forEach(p=>{ const sp=document.createElement('span'); sp.className='badge'; sp.textContent=p; mdPurposes.appendChild(sp); });
+      mdSpecs.innerHTML = '';
+      Object.entries(d.specs || {}).forEach(([k,v])=>{ const li=document.createElement('li'); li.textContent = ${k}: ${v}; mdSpecs.appendChild(li); });
+      mdBuy.href = d.buyLink; mdBuy.textContent = 'Buy on merchant';
+      mdEmoji.textContent = d.type==='Laptop'?'💻':'📱';
+      modal.style.display='flex';
+      mdClose.focus();
+    }
+
+    mdClose.addEventListener('click', ()=> modal.style.display='none');
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.style.display='none'; });
+
+    [deviceTypeEl,budgetEl,purposeEl,qEl].forEach(el=>el.addEventListener('input', ()=>{ renderRecommendations(); renderList(); }));
+
+    // escape small text for safety
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // initial render
+    renderRecommendations(); renderList();
+  </script>
+</body>
+</html>
